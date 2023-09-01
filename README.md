@@ -85,21 +85,21 @@ def gen_data(rows: int, offset: int = 0) -> pd.DataFrame:
     return pd.DataFrame([val for _ in range(rows)])
 
 # Shared prefix for all three decorators
-prefix = "test:"
+prefix = "test"
 
-# @cache decorator
+# @cache decorator - returns function value
 @rd.cache(cl, prefix, 60)
-def gen_data_cache(rows: int) -> list[dict]:
+def gen_data_cache(rows: int) -> pd.DataFrame:
     return gen_data(rows, 0)
 
-# @update decorator
+# @update decorator - return bool | None
 @rd.update(cl, prefix)
-def gen_data_update(rows: int) -> list[dict]:
+def gen_data_update(rows: int) -> bool | None:
     return gen_data(rows, 1)
 
-# @delete decorator
-@rd.delete(cl, prefix)
-def gen_data_delete(rows: int) -> list[dict]:
+# @delete decorator return bool | None
+@rd.delete(cl, prefix) 
+def gen_data_delete(rows: int) -> bool | None:
     return gen_data(rows, 0)
 ```
 
@@ -110,88 +110,88 @@ from timeit import timeit
 # Flush keys
 cl.flushall()
 
-# First call - (no cache) - corresponding key: "demo:100::"
+# First call - (no cache) - corresponding key: "test:100::"
 print("No. cache - 100 row".ljust(20), timeit(lambda: gen_data_cache(100), number=1))
-# No. cache - 100 row  1.011956290982198
+# No. cache - 100 row  1.0088350829901174
 
-# Second call - (cache hit) - corresponding key: "demo:100::"
+# Second call - (cache hit) - corresponding key: "test:100::"
 print("Hit cache - 100 row".ljust(20), timeit(lambda: gen_data_cache(100), number=1))
-# Hit cache - 100 row  0.001615790999494
+# Hit cache - 100 row  0.002061583974864334
 
-# Call with different arguments - (no cache) - corresponding key: "demo:90::"
+# Call with different arguments - (no cache) - corresponding key: "test:90::"
 print("No. cache - 90 row".ljust(20), timeit(lambda: gen_data_cache(90), number=1))
-# No. cache - 90 row   1.009897165989969
+# No. cache - 90 row   1.0119208749965765
 
-# Second call - (cache hit) - corresponding key: "demo:90::"
+# Second call - (cache hit) - corresponding key: "test:90::"
 print("Hit cache - 90 row".ljust(20), timeit(lambda: gen_data_cache(90), number=1))
-# Hit cache - 90 row   0.001373166975099
+# Hit cache - 90 row   0.001857625029515475
 
 # Data
 print(gen_data_cache(100))
 # <pandas.DataFrame>
-# bool np_bool int int8 int16 int32 int64 ... time time_tz timedelta Timedelta datetime64 timedelta64 None
-# 0 True False 1 2 3 4 5 ... 01:01:01.000001 01:01:01.000001+08:00 1 days 1 days 2023-01-01 01:01:01.000001 2 days None
-# 1 True False 1 2 3 4 5 ... 01:01:01.000001 01:01:01.000001+08:00 1 days 1 days 2023-01-01 01:01:01.000001 2 days None
-# 2 True False 1 2 3 4 5 ... 01:01:01.000001 01:01:01.000001+08:00 1 days 1 days 2023-01-01 01:01:01.000001 2 days None
-# 3 True False 1 2 3 4 5 ... 01:01:01.000001 01:01:01.000001+08:00 1 days 1 days 2023-01-01 01:01:01.000001 2 days None
-# 4 True False 1 2 3 4 5 ... 01:01:01.000001 01:01:01.000001+08:00 1 days 1 days 2023-01-01 01:01:01.000001 2 days None
+# bool np_bool int int64 unit unit64 float ... bytes datetime datetime_tz time time_tz timedelta None
+# 0 True False 1 5 5 5 1.1 ... 2023-01-01 01:01:01.000001 2023-01-01 01:01:01.000001+08:00 01:01:01.000001 01:01:01.000001+08:00 1 days None
+# 1 True False 1 5 5 5 1.1 ... 2023-01-01 01:01:01.000001 2023-01-01 01:01:01.000001+08:00 01:01:01.000001 01:01:01.000001+08:00 1 days None
+# 2 True False 1 5 5 5 1.1 ... 2023-01-01 01:01:01.000001 2023-01-01 01:01:01.000001+08:00 01:01:01.000001 01:01:01.000001+08:00 1 days None
+# 3 True False 1 5 5 5 1.1 ... 2023-01-01 01:01:01.000001 2023-01-01 01:01:01.000001+08:00 01:01:01.000001 01:01:01.000001+08:00 1 days None
+# 4 True False 1 5 5 5 1.1 ... 2023-01-01 01:01:01.000001 2023-01-01 01:01:01.000001+08:00 01:01:01.000001 01:01:01.000001+08:00 1 days None
 # .. ... ... ... ... ... ... ... ... ... ... ... ... ... ... ...
-# 95 True False 1 2 3 4 5 ... 01:01:01.000001 01:01:01.000001+08:00 1 days 1 days 2023-01-01 01:01:01.000001 2 days None
-# 96 True False 1 2 3 4 5 ... 01:01:01.000001 01:01:01.000001+08:00 1 days 1 days 2023-01-01 01:01:01.000001 2 days None
-# 97 True False 1 2 3 4 5 ... 01:01:01.000001 01:01:01.000001+08:00 1 days 1 days 2023-01-01 01:01:01.000001 2 days None
-# 98 True False 1 2 3 4 5 ... 01:01:01.000001 01:01:01.000001+08:00 1 days 1 days 2023-01-01 01:01:01.000001 2 days None
-# 99 True False 1 2 3 4 5 ... 01:01:01.000001 01:01:01.000001+08:00 1 days 1 days 2023-01-01 01:01:01.000001 2 days None
-# [100 rows x 29 columns]
+# 95 True False 1 5 5 5 1.1 ... 2023-01-01 01:01:01.000001 2023-01-01 01:01:01.000001+08:00 01:01:01.000001 01:01:01.000001+08:00 1 days None
+# 96 True False 1 5 5 5 1.1 ... 2023-01-01 01:01:01.000001 2023-01-01 01:01:01.000001+08:00 01:01:01.000001 01:01:01.000001+08:00 1 days None
+# 97 True False 1 5 5 5 1.1 ... 2023-01-01 01:01:01.000001 2023-01-01 01:01:01.000001+08:00 01:01:01.000001 01:01:01.000001+08:00 1 days None
+# 98 True False 1 5 5 5 1.1 ... 2023-01-01 01:01:01.000001 2023-01-01 01:01:01.000001+08:00 01:01:01.000001 01:01:01.000001+08:00 1 days None
+# 99 True False 1 5 5 5 1.1 ... 2023-01-01 01:01:01.000001 2023-01-01 01:01:01.000001+08:00 01:01:01.000001 01:01:01.000001+08:00 1 days None
+# [100 rows x 17 columns]
 ```
 
 ### Usage (Update)
 ``` python
-# Update existing cache - corresponding key: "demo:100::"
+# Update existing cache - corresponding key: "test:100::"
 print("Update cache - 100 row".ljust(20), timeit(lambda: gen_data_update(100), number=1))
-# Update cache - 100 row 1.007230375020299
+# Update cache - 100 row 1.0083019589656033
 print("Update status:", gen_data_update(100)) # Will return True since the key exists.
 # Update status: True
 
-# Update non-exist cache - corresponding key: "demo:80::"
+# Update non-exist cache - corresponding key: "test:80::"
 print("Update miss - 80 row".ljust(20), timeit(lambda: gen_data_update(80), number=1))
-# Update miss - 80 row   0.00020654097897931
+# Update miss - 80 row   0.00012520799646154046
 print("Update status:", gen_data_update(80)) # Will return False since the key does not exist.
 # Update status: False
 
 # Data
 print(gen_data_cache(100)) # Call cache function to retrieve the updated data
 # <pandas.DataFrame>
-# bool np_bool int int8 int16 int32 int64 ... time time_tz timedelta Timedelta datetime64 timedelta64 None
-# 0 True False 2 3 4 5 6 ... 02:01:01.000001 02:01:01.000001+08:00 2 days 2 days 2023-01-01 01:01:01.000001 3 days None
-# 1 True False 2 3 4 5 6 ... 02:01:01.000001 02:01:01.000001+08:00 2 days 2 days 2023-01-01 01:01:01.000001 3 days None
-# 2 True False 2 3 4 5 6 ... 02:01:01.000001 02:01:01.000001+08:00 2 days 2 days 2023-01-01 01:01:01.000001 3 days None
-# 3 True False 2 3 4 5 6 ... 02:01:01.000001 02:01:01.000001+08:00 2 days 2 days 2023-01-01 01:01:01.000001 3 days None
-# 4 True False 2 3 4 5 6 ... 02:01:01.000001 02:01:01.000001+08:00 2 days 2 days 2023-01-01 01:01:01.000001 3 days None
+# bool np_bool int int64 unit unit64 float ... bytes datetime datetime_tz time time_tz timedelta None
+# 0 True False 2 6 6 6 2.1 ... 2023-01-02 01:01:01.000001 2023-01-02 01:01:01.000001+08:00 02:01:01.000001 02:01:01.000001+08:00 2 days None
+# 1 True False 2 6 6 6 2.1 ... 2023-01-02 01:01:01.000001 2023-01-02 01:01:01.000001+08:00 02:01:01.000001 02:01:01.000001+08:00 2 days None
+# 2 True False 2 6 6 6 2.1 ... 2023-01-02 01:01:01.000001 2023-01-02 01:01:01.000001+08:00 02:01:01.000001 02:01:01.000001+08:00 2 days None
+# 3 True False 2 6 6 6 2.1 ... 2023-01-02 01:01:01.000001 2023-01-02 01:01:01.000001+08:00 02:01:01.000001 02:01:01.000001+08:00 2 days None
+# 4 True False 2 6 6 6 2.1 ... 2023-01-02 01:01:01.000001 2023-01-02 01:01:01.000001+08:00 02:01:01.000001 02:01:01.000001+08:00 2 days None
 # .. ... ... ... ... ... ... ... ... ... ... ... ... ... ... ...
-# 95 True False 2 3 4 5 6 ... 02:01:01.000001 02:01:01.000001+08:00 2 days 2 days 2023-01-01 01:01:01.000001 3 days None
-# 96 True False 2 3 4 5 6 ... 02:01:01.000001 02:01:01.000001+08:00 2 days 2 days 2023-01-01 01:01:01.000001 3 days None
-# 97 True False 2 3 4 5 6 ... 02:01:01.000001 02:01:01.000001+08:00 2 days 2 days 2023-01-01 01:01:01.000001 3 days None
-# 98 True False 2 3 4 5 6 ... 02:01:01.000001 02:01:01.000001+08:00 2 days 2 days 2023-01-01 01:01:01.000001 3 days None
-# 99 True False 2 3 4 5 6 ... 02:01:01.000001 02:01:01.000001+08:00 2 days 2 days 2023-01-01 01:01:01.000001 3 days None
-# [100 rows x 29 columns]
+# 95 True False 2 6 6 6 2.1 ... 2023-01-02 01:01:01.000001 2023-01-02 01:01:01.000001+08:00 02:01:01.000001 02:01:01.000001+08:00 2 days None
+# 96 True False 2 6 6 6 2.1 ... 2023-01-02 01:01:01.000001 2023-01-02 01:01:01.000001+08:00 02:01:01.000001 02:01:01.000001+08:00 2 days None
+# 97 True False 2 6 6 6 2.1 ... 2023-01-02 01:01:01.000001 2023-01-02 01:01:01.000001+08:00 02:01:01.000001 02:01:01.000001+08:00 2 days None
+# 98 True False 2 6 6 6 2.1 ... 2023-01-02 01:01:01.000001 2023-01-02 01:01:01.000001+08:00 02:01:01.000001 02:01:01.000001+08:00 2 days None
+# 99 True False 2 6 6 6 2.1 ... 2023-01-02 01:01:01.000001 2023-01-02 01:01:01.000001+08:00 02:01:01.000001 02:01:01.000001+08:00 2 days None
+# [100 rows x 17 columns]
 ```
 
 ### Usage (Delete)
 ``` python
-# Delete existing cache - corresponding key: "demo:100::"
+# Delete existing cache - corresponding key: "test:100::"
 print("Delete cache - 100 row".ljust(20), timeit(lambda: gen_date_delete(100), number=1))
-# Delete cache - 100 row 0.0001840419718064
+# Delete cache - 100 row 0.00010604201816022396
 print("Delete status:", gen_date_delete(100)) # Will return True since the key exists.
 # Delete status: True
 
-# Delete non-exist cache - corresponding key: "demo:80::"
+# Delete non-exist cache - corresponding key: "test:80::"
 print("Delete miss - 80 row".ljust(20), timeit(lambda: gen_date_delete(80), number=1))
-# Delete miss - 80 row   0.0001740419718064
+# Delete miss - 80 row   9.779195534065366e-05
 print("Delete status:", gen_date_delete(80)) # Will return False since the key does not exist.
 # Delete status: False
 
-# Check cache - corresponding key: "demo:80::"
-print("Check key:", cl.get("demo:100::"))
+# Check cache - corresponding key: "test:80::"
+print("Check key:", cl.get("test:100::"))
 # Check key: None
 ```
 
