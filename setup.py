@@ -27,9 +27,9 @@ def extension(filename: str, include_np: bool, *extra_compile_args: str) -> Exte
 
 # Build Extensions
 if platform.system() == "Windows":
-    extensions = [extension("utils.py", False)]
+    extensions = [extension("utils.py", True)]
 else:
-    extensions = [extension("utils.py", False, "-Wno-unreachable-code")]
+    extensions = [extension("utils.py", True, "-Wno-unreachable-code")]
 
 
 # Build
