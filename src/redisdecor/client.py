@@ -4,7 +4,6 @@ from __future__ import annotations
 from typing import Callable, Iterator, Literal, Any
 
 import datetime
-import serializor
 from redis.retry import Retry
 from redis import StrictRedis, ConnectionPool
 from redis.credentials import CredentialProvider
@@ -57,9 +56,9 @@ class Redis(StrictRedis):
     ) -> None:
         """Subclass of `reids.StricRedis`.
 
-        Decorators in this package requires this subclass to work. Besides 
-        fixed `decode_responses=False`, this subclass works the same 
-        as the `redis.StrictRedis` class.
+        Decorators in this package requires this subclass to work. Besides
+        fixed `decode_responses=False`, this subclass works the same as the
+        `redis.StrictRedis`.
 
         ### Added methods
         - For decorators: generate_key, serialize, deserialize, decor_cache_get
@@ -168,7 +167,7 @@ class Redis(StrictRedis):
         :return: The value of the key, or `None` if the key does not exist.
         """
         try:
-            return utils.deserialize(self.execute_command("GET", key), deserialize)
+            return utils.deserialize_cond(self.execute_command("GET", key), deserialize)
         except Exception as err:
             return utils.handle_exc(err, "x_get", raise_error)
 
@@ -195,7 +194,9 @@ class Redis(StrictRedis):
         :return: The value of the key, or `None` if the key does not exist.
         """
         try:
-            return utils.deserialize(self.execute_command("GETDEL", key), deserialize)
+            return utils.deserialize_cond(
+                self.execute_command("GETDEL", key), deserialize
+            )
         except Exception as err:
             return utils.handle_exc(err, "x_getdel", raise_error)
 
@@ -238,7 +239,7 @@ class Redis(StrictRedis):
         """
         args: list = ["PERSIST"] if ex is None else utils.parse_ex(ex, ex_ms)
         try:
-            return utils.deserialize(
+            return utils.deserialize_cond(
                 self.execute_command("GETEX", key, *args), deserialize
             )
         except Exception as err:
@@ -349,7 +350,7 @@ class Redis(StrictRedis):
         :return: `<bool>` Whether the value was set.
         """
         try:
-            value = utils.serialize(value, serialize)
+            value = utils.serialize_cond(value, serialize)
         except Exception as err:
             return utils.handle_exc(err, "x_set", raise_error)
         args: list = [key, value]
@@ -424,7 +425,7 @@ class Redis(StrictRedis):
         :return: `<bytes>` The original value of the key, or `None` if the key does not exist.
         """
         try:
-            value = utils.serialize(value, serialize)
+            value = utils.serialize_cond(value, serialize)
         except Exception as err:
             return utils.handle_exc(err, "x_setget", raise_error)
 
@@ -437,7 +438,7 @@ class Redis(StrictRedis):
         if set_on is not None:
             args.append(set_on)
         try:
-            return utils.deserialize(self.execute_command("SET", *args), serialize)
+            return utils.deserialize_cond(self.execute_command("SET", *args), serialize)
         except Exception as err:
             return utils.handle_exc(err, "x_setget", raise_error)
 
@@ -743,19 +744,13 @@ class Redis(StrictRedis):
         :raises DataError: If any error occurs.
         :return: `<bytes>` The serialized data.
         """
-        try:
-            return serializor.dumps(value)
-        except Exception as err:
-            return utils.handle_exc(err, "serialize", raise_error=True)
+        return utils.serialize(value)
 
     def deserialize(self, value: bytes) -> Any:
         """Deserialize the value to its original (or compatible) python dtype.
         Must be used with the `serialize` function in this module.
         """
-        try:
-            return serializor.loads(value)
-        except Exception as err:
-            return utils.handle_exc(err, "deserialize", raise_error=True)
+        return utils.deserialize(value)
 
     def decor_cache_get(
         self,
@@ -780,7 +775,7 @@ class Redis(StrictRedis):
             return None
         # Deserialize
         try:
-            return serializor.loads(value)
+            return utils.deserialize(value)
         except Exception as err:
             logger.warning(f"Redis <decorator.cache.deserialize> error: {err}")
             return None
@@ -795,7 +790,7 @@ class Redis(StrictRedis):
         """Set method for cache decorator. (Internal use only)."""
         # Serialize
         try:
-            value = serializor.dumps(value)
+            value = utils.serialize(value)
         except Exception as err:
             logger.warning(f"Redis <decorator.cache.serialize> error: {err}")
             return None
@@ -812,22 +807,22 @@ class Redis(StrictRedis):
         try:
             return bool(self.execute_command("EXISTS", key))
         except Exception as err:
-            logger.warning(f"Redis <decorator.update> error: {err}")
+            logger.warning(f"Redis <decorator.update.exists> error: {err}")
             return False
 
     def decor_update_set(self, key: str, value: Any) -> bool | None:
         """Set method for update decorator. (Internal use only)."""
         # Serialize
         try:
-            value = serializor.dumps(value)
+            value = utils.serialize(value)
         except Exception as err:
-            logger.warning(f"Redis <decorator.update> error: {err}")
+            logger.warning(f"Redis <decorator.update.serialize> error: {err}")
             return None
         # Set value
         try:
             return bool(self.execute_command("SET", key, value, "KEEPTTL", "XX"))
         except Exception as err:
-            logger.warning(f"Redis <decorator.delete> error: {err}")
+            logger.warning(f"Redis <decorator.update.set> error: {err}")
             return None
 
     def decor_delete(self, key: str) -> bool | None:

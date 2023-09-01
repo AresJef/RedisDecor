@@ -1,12 +1,10 @@
 # /usr/bin/python
 # -*- coding: UTF-8 -*-
-import time
-from timeit import timeit
-from decimal import Decimal
-import datetime, numpy as np, pandas as pd
-
-
 def demo() -> None:
+    import time
+    from timeit import timeit
+    from decimal import Decimal
+    import datetime, numpy as np, pandas as pd
     import redisdecor as rd
 
     cl = rd.get_client(host="127.0.0.1", db=10)

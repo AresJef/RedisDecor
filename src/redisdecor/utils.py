@@ -4,31 +4,56 @@
 
 # Cython imports
 import cython
-from cython.cimports.cytimes import cydatetime as cydt  # type: ignore
+from cython.cimports import numpy as np  # type: ignore
 from cython.cimports.cpython import datetime  # type: ignore
 from cython.cimports.cpython.int import PyInt_Check as is_int  # type: ignore
 from cython.cimports.cpython.float import PyFloat_Check as is_float  # type: ignore
 from cython.cimports.cpython.string import PyString_Check as is_str  # type: ignore
+from cython.cimports.serializor.transcode import encode, decode  # type: ignore
+from cython.cimports.cytimes import cydatetime as cydt  # type: ignore
 
+np.import_array()
 datetime.import_datetime()
 
 # Python imports
 import datetime
-import serializor
 from redis import DataError
 from cytimes import cydatetime as cydt
+from serializor import SerializorError
 from redisdecor.logs import logger
 
 
 # Serialization
 @cython.ccall
-def serialize(value: object, s: cython.bint) -> object:
-    return serializor.dumps(value) if s else value
+def serialize(value: object) -> object:
+    try:
+        return encode(value)
+    except SerializorError as err:
+        raise DataError(err) from err
 
 
 @cython.ccall
-def deserialize(value: object, ds: cython.bint) -> object:
-    return serializor.loads(value) if ds and value is not None else value
+def serialize_cond(value: object, s: cython.bint) -> object:
+    try:
+        return encode(value) if s else value
+    except SerializorError as err:
+        raise DataError(err) from err
+
+
+@cython.ccall
+def deserialize(value: object) -> object:
+    try:
+        return decode(value)
+    except SerializorError as err:
+        raise DataError(err) from err
+
+
+@cython.ccall
+def deserialize_cond(value: object, ds: cython.bint) -> object:
+    try:
+        return decode(value) if ds and value is not None else value
+    except SerializorError as err:
+        raise DataError(err) from err
 
 
 # Arguments
@@ -158,12 +183,9 @@ def generate_key(prefix: str, args: tuple, kwargs: dict) -> str:
 
 
 # Exceptions
-def handle_exc(exc: Exception, src: str, raise_error: cython.bint) -> object:
+def handle_exc(exc: Exception, src: str, raise_error: cython.bint) -> None:
     if raise_error:
-        if isinstance(exc, serializor.SerializorError):
-            raise DataError(exc) from exc
-        else:
-            raise exc
+        raise exc
     else:
         logger.warning(f"Redis <{src}> error: {exc}")
         return None
