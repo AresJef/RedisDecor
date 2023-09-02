@@ -4,22 +4,19 @@
 
 # Cython imports
 import cython
-from cython.cimports import numpy as np  # type: ignore
 from cython.cimports.cpython import datetime  # type: ignore
 from cython.cimports.cpython.int import PyInt_Check as is_int  # type: ignore
 from cython.cimports.cpython.float import PyFloat_Check as is_float  # type: ignore
 from cython.cimports.cpython.string import PyString_Check as is_str  # type: ignore
-from cython.cimports.serializor.transcode import encode, decode  # type: ignore
 from cython.cimports.cytimes import cydatetime as cydt  # type: ignore
 
-np.import_array()
 datetime.import_datetime()
 
 # Python imports
 import datetime
 from redis import DataError
 from cytimes import cydatetime as cydt
-from serializor import SerializorError
+from serializor import dumps, loads, SerializorError
 from redisdecor.logs import logger
 
 
@@ -27,7 +24,7 @@ from redisdecor.logs import logger
 @cython.ccall
 def serialize(value: object) -> object:
     try:
-        return encode(value)
+        return dumps(value)
     except SerializorError as err:
         raise DataError(err) from err
 
@@ -35,7 +32,7 @@ def serialize(value: object) -> object:
 @cython.ccall
 def serialize_cond(value: object, s: cython.bint) -> object:
     try:
-        return encode(value) if s else value
+        return dumps(value) if s else value
     except SerializorError as err:
         raise DataError(err) from err
 
@@ -43,7 +40,7 @@ def serialize_cond(value: object, s: cython.bint) -> object:
 @cython.ccall
 def deserialize(value: object) -> object:
     try:
-        return decode(value)
+        return loads(value)
     except SerializorError as err:
         raise DataError(err) from err
 
@@ -51,7 +48,7 @@ def deserialize(value: object) -> object:
 @cython.ccall
 def deserialize_cond(value: object, ds: cython.bint) -> object:
     try:
-        return decode(value) if ds and value is not None else value
+        return loads(value) if ds and value is not None else value
     except SerializorError as err:
         raise DataError(err) from err
 
