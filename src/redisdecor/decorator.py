@@ -94,8 +94,10 @@ def cache(
     - bytes: `bytes` -> deserialize to `bytes`
     - date: `datetime.date` -> deserialize to `datetime.date`
     - time: `datetime.time` -> deserialize to `datetime.time`
-    - datetime: `datetime.datetime` & `pandas.Timestamp` & `numpy.datetime64` -> deserialize to `datetime.datetime`
-    - timedelta: `datetime.timedelta` & `pandas.Timedelta` & `numpy.timedelta64` -> deserialize to `datetime.timedelta`
+    - datetime: `datetime.datetime` & `pandas.Timestamp` -> deserialize to `datetime.datetime`
+    - datetime64*: `numpy.datetime64` & `time.struct_time` -> deserialize to `datetime.datetime`
+    - timedelta: `datetime.timedelta` & `pandas.Timedelta` -> deserialize to `datetime.timedelta`
+    - timedelta64: `numpy.timedelta64` -> deserialize to `datetime.timedelta`
     - None: `None` & `numpy.nan` -> deserialize to `None`
     - list: `list` of above supported data types -> deserialize to `list`
     - tuple: `tuple` of above supported data types -> deserialize to `list`
