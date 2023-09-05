@@ -8,6 +8,7 @@ from cython.cimports.cpython import datetime  # type: ignore
 from cython.cimports.cpython.int import PyInt_Check as is_int  # type: ignore
 from cython.cimports.cpython.float import PyFloat_Check as is_float  # type: ignore
 from cython.cimports.cpython.string import PyString_Check as is_str  # type: ignore
+from cython.cimports.serializor import transcode  # type: ignore
 from cython.cimports.cytimes import cydatetime as cydt  # type: ignore
 
 datetime.import_datetime()
@@ -15,8 +16,8 @@ datetime.import_datetime()
 # Python imports
 import datetime
 from redis import DataError
+from serializor import transcode
 from cytimes import cydatetime as cydt
-from serializor import dumps, loads, SerializorError
 from redisdecor.logs import logger
 
 
@@ -24,32 +25,32 @@ from redisdecor.logs import logger
 @cython.ccall
 def serialize(value: object) -> object:
     try:
-        return dumps(value)
-    except SerializorError as err:
+        return transcode.encode(value)
+    except Exception as err:
         raise DataError(err) from err
 
 
 @cython.ccall
 def serialize_cond(value: object, s: cython.bint) -> object:
     try:
-        return dumps(value) if s else value
-    except SerializorError as err:
+        return transcode.encode(value) if s else value
+    except Exception as err:
         raise DataError(err) from err
 
 
 @cython.ccall
 def deserialize(value: object) -> object:
     try:
-        return loads(value)
-    except SerializorError as err:
+        return transcode.decode(value)
+    except Exception as err:
         raise DataError(err) from err
 
 
 @cython.ccall
 def deserialize_cond(value: object, ds: cython.bint) -> object:
     try:
-        return loads(value) if ds and value is not None else value
-    except SerializorError as err:
+        return transcode.decode(value) if ds and value is not None else value
+    except Exception as err:
         raise DataError(err) from err
 
 
@@ -184,5 +185,5 @@ def handle_exc(exc: Exception, src: str, raise_error: cython.bint) -> None:
     if raise_error:
         raise exc
     else:
-        logger.warning(f"Redis <{src}> error: {exc}")
+        logger.warning(f"Redis <{src}> error: {type(exc)} {exc}")
         return None

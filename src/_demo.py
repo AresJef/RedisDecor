@@ -68,6 +68,10 @@ def demo() -> None:
     # Second call - (cache hit)
     print("Hit cache - 100 row".ljust(20), timeit(lambda: gen_data_cache(100), number=1))
 
+    # Print cache
+    print("Print cache:")
+    print(gen_data_cache(100))
+
     # Call with different arguments - (no cache)
     print("No. cache - 90 row".ljust(20), timeit(lambda: gen_data_cache(90), number=1))
 
@@ -77,6 +81,10 @@ def demo() -> None:
     # Update existing cache
     print("Update cache - 100 row".ljust(20), timeit(lambda: gen_data_update(100), number=1))
     print("Update status:", gen_data_update(100))
+
+    # Print cache
+    print("Print cache:")
+    print(gen_data_cache(100))
 
     # Update non-exist cache
     print("Update miss - 80 row".ljust(20), timeit(lambda: gen_data_update(80), number=1))
