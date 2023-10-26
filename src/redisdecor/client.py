@@ -7,8 +7,11 @@ import datetime
 from redis.retry import Retry
 from redis import StrictRedis, ConnectionPool
 from redis.credentials import CredentialProvider
-from redisdecor import utils
 from redisdecor.logs import logger
+from redisdecor.utils import serialize, deserialize
+from redisdecor.utils import serialize_cond, deserialize_cond
+from redisdecor.utils import timestamp_to_datetime, generate_key
+from redisdecor.utils import parse_ex, parse_expire_ex, handle_exc
 
 __all__ = ["Redis", "get_client"]
 
@@ -167,9 +170,9 @@ class Redis(StrictRedis):
         :return: The value of the key, or `None` if the key does not exist.
         """
         try:
-            return utils.deserialize_cond(self.execute_command("GET", key), deserialize)
+            return deserialize_cond(self.execute_command("GET", key), deserialize)
         except Exception as err:
-            return utils.handle_exc(err, "x_get", raise_error)
+            return handle_exc(err, "x_get", raise_error)
 
     def x_getdel(
         self,
@@ -194,11 +197,9 @@ class Redis(StrictRedis):
         :return: The value of the key, or `None` if the key does not exist.
         """
         try:
-            return utils.deserialize_cond(
-                self.execute_command("GETDEL", key), deserialize
-            )
+            return deserialize_cond(self.execute_command("GETDEL", key), deserialize)
         except Exception as err:
-            return utils.handle_exc(err, "x_getdel", raise_error)
+            return handle_exc(err, "x_getdel", raise_error)
 
     def x_getex(
         self,
@@ -237,13 +238,13 @@ class Redis(StrictRedis):
 
         :return: The value of the key, or `None` if the key does not exist.
         """
-        args: list = ["PERSIST"] if ex is None else utils.parse_ex(ex, ex_ms)
+        args: list = ["PERSIST"] if ex is None else parse_ex(ex, ex_ms)
         try:
-            return utils.deserialize_cond(
+            return deserialize_cond(
                 self.execute_command("GETEX", key, *args), deserialize
             )
         except Exception as err:
-            return utils.handle_exc(err, "x_getex", raise_error)
+            return handle_exc(err, "x_getex", raise_error)
 
     def x_expiry(
         self,
@@ -275,19 +276,19 @@ class Redis(StrictRedis):
             try:
                 return self.execute_command("PTTL" if ms else "TTL", key)
             except Exception as err:
-                return utils.handle_exc(err, "x_expiry", raise_error)
+                return handle_exc(err, "x_expiry", raise_error)
         elif ms:
             try:
                 value = self.execute_command("PEXPIRETIME", key) / 1000
             except Exception as err:
-                return utils.handle_exc(err, "x_expiry", raise_error)
+                return handle_exc(err, "x_expiry", raise_error)
         else:
             try:
                 value = self.execute_command("EXPIRETIME", key)
             except Exception as err:
-                return utils.handle_exc(err, "x_expiry", raise_error)
+                return handle_exc(err, "x_expiry", raise_error)
         if format == "dt" and value > 0:
-            return utils.timestamp_to_datetime(value)
+            return timestamp_to_datetime(value)
         else:
             return value
 
@@ -350,21 +351,21 @@ class Redis(StrictRedis):
         :return: `<bool>` Whether the value was set.
         """
         try:
-            value = utils.serialize_cond(value, serialize)
+            value = serialize_cond(value, serialize)
         except Exception as err:
-            return utils.handle_exc(err, "x_set", raise_error)
+            return handle_exc(err, "x_set", raise_error)
         args: list = [key, value]
         if ex is not None:
             if ex == "KEEPTTL":
                 args.append(ex)
             else:
-                args += utils.parse_ex(ex, ex_ms)
+                args += parse_ex(ex, ex_ms)
         if set_on is not None:
             args.append(set_on)
         try:
             return bool(self.execute_command("SET", *args))
         except Exception as err:
-            return utils.handle_exc(err, "x_set", raise_error)
+            return handle_exc(err, "x_set", raise_error)
 
     def x_setget(
         self,
@@ -425,22 +426,22 @@ class Redis(StrictRedis):
         :return: `<bytes>` The original value of the key, or `None` if the key does not exist.
         """
         try:
-            value = utils.serialize_cond(value, serialize)
+            value = serialize_cond(value, serialize)
         except Exception as err:
-            return utils.handle_exc(err, "x_setget", raise_error)
+            return handle_exc(err, "x_setget", raise_error)
 
         args: list = [key, value]
         if ex is not None:
             if ex == "KEEPTTL":
                 args.append(ex)
             else:
-                args += utils.parse_ex(ex, ex_ms)
+                args += parse_ex(ex, ex_ms)
         if set_on is not None:
             args.append(set_on)
         try:
-            return utils.deserialize_cond(self.execute_command("SET", *args), serialize)
+            return deserialize_cond(self.execute_command("SET", *args), serialize)
         except Exception as err:
-            return utils.handle_exc(err, "x_setget", raise_error)
+            return handle_exc(err, "x_setget", raise_error)
 
     def x_expire(
         self,
@@ -482,15 +483,15 @@ class Redis(StrictRedis):
             try:
                 return bool(self.execute_command("PERSIST", key))
             except Exception as err:
-                return utils.handle_exc(err, "x_expire", raise_error)
+                return handle_exc(err, "x_expire", raise_error)
         else:
-            args = utils.parse_expire_ex(key, ex, ex_ms)
+            args = parse_expire_ex(key, ex, ex_ms)
             if set_on is not None:
                 args.append(set_on)
             try:
                 return bool(self.execute_command(*args))
             except Exception as err:
-                return utils.handle_exc(err, "x_expire", raise_error)
+                return handle_exc(err, "x_expire", raise_error)
 
     # Del commands
     def x_del(self, *keys: str, raise_error: bool = True) -> int | None:
@@ -508,7 +509,7 @@ class Redis(StrictRedis):
         try:
             return self.execute_command("DEL", *keys)
         except Exception as err:
-            return utils.handle_exc(err, "x_del", raise_error)
+            return handle_exc(err, "x_del", raise_error)
 
     def x_delptn(
         self,
@@ -549,7 +550,7 @@ class Redis(StrictRedis):
         try:
             return self.execute_command("EXISTS", *keys)
         except Exception as err:
-            return utils.handle_exc(err, "x_exists", raise_error)
+            return handle_exc(err, "x_exists", raise_error)
 
     def x_cntptn(
         self,
@@ -601,7 +602,7 @@ class Redis(StrictRedis):
         try:
             return self.execute_command("INCRBY", key, amount)
         except Exception as err:
-            return utils.handle_exc(err, "x_incrby", raise_error)
+            return handle_exc(err, "x_incrby", raise_error)
 
     def x_decrby(
         self,
@@ -626,7 +627,7 @@ class Redis(StrictRedis):
         try:
             return self.execute_command("DECRBY", key, amount)
         except Exception as err:
-            return utils.handle_exc(err, "x_decrby", raise_error)
+            return handle_exc(err, "x_decrby", raise_error)
 
     # Scan commands
     def x_scan(
@@ -660,7 +661,7 @@ class Redis(StrictRedis):
         try:
             return self.execute_command("SCAN", *args, **kwargs)
         except Exception as err:
-            return (0, utils.handle_exc(err, "x_scan", raise_error))
+            return (0, handle_exc(err, "x_scan", raise_error))
 
     def x_scan_iter(
         self,
@@ -713,7 +714,7 @@ class Redis(StrictRedis):
         >>> key = generate_key("pref", 1, 2, 3, a=1, b=2, c=3)
         >>> "pref:1:2:3:a1:b2:c3:"
         """
-        return utils.generate_key(prefix, args, kwargs)
+        return generate_key(prefix, args, kwargs)
 
     def serialize(self, value: Any) -> bytes:
         """Serielize an value to bytes.
@@ -746,13 +747,13 @@ class Redis(StrictRedis):
         :raises DataError: If any error occurs.
         :return: `<bytes>` The serialized data.
         """
-        return utils.serialize(value)
+        return serialize(value)
 
     def deserialize(self, value: bytes) -> Any:
         """Deserialize the value to its original (or compatible) python dtype.
         Must be used with the `serialize` function in this module.
         """
-        return utils.deserialize(value)
+        return deserialize(value)
 
     def decor_cache_get(
         self,
@@ -766,7 +767,7 @@ class Redis(StrictRedis):
         try:
             # . refresh expiry
             if ex_rf:
-                value = self.execute_command("GETEX", key, *utils.parse_ex(ex, ex_ms))
+                value = self.execute_command("GETEX", key, *parse_ex(ex, ex_ms))
             # . get directly
             else:
                 value = self.execute_command("GET", key)
@@ -777,7 +778,7 @@ class Redis(StrictRedis):
             return None
         # Deserialize
         try:
-            return utils.deserialize(value)
+            return deserialize(value)
         except Exception as err:
             logger.warning(f"Redis <decorator.cache.deserialize> error: {err}")
             return None
@@ -792,13 +793,13 @@ class Redis(StrictRedis):
         """Set method for cache decorator. (Internal use only)."""
         # Serialize
         try:
-            value = utils.serialize(value)
+            value = serialize(value)
         except Exception as err:
             logger.warning(f"Redis <decorator.cache.serialize> error: {err}")
             return None
         # Set value
         try:
-            self.execute_command("SET", key, value, *utils.parse_ex(ex, ex_ms))
+            self.execute_command("SET", key, value, *parse_ex(ex, ex_ms))
             return None
         except Exception as err:
             logger.warning(f"Redis <decorator.cache.set> error: {err}")
@@ -816,7 +817,7 @@ class Redis(StrictRedis):
         """Set method for update decorator. (Internal use only)."""
         # Serialize
         try:
-            value = utils.serialize(value)
+            value = serialize(value)
         except Exception as err:
             logger.warning(f"Redis <decorator.update.serialize> error: {err}")
             return None
