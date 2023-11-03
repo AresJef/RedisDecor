@@ -18,6 +18,8 @@ __all__ = ["Redis", "get_client"]
 
 # Redis Subclass
 class Redis(StrictRedis):
+    """Represents a custom redis database. Subclass of `reids.StricRedis`."""
+
     def __init__(
         self,
         host: str = "localhost",
@@ -57,7 +59,7 @@ class Redis(StrictRedis):
         credential_provider: CredentialProvider | None = None,
         protocol: int | None = 2,
     ) -> None:
-        """Subclass of `reids.StricRedis`.
+        """Custom redis database. Subclass of `reids.StricRedis`.
 
         Decorators in this package requires this subclass to work. Besides
         fixed `decode_responses=False`, this subclass works the same as the
