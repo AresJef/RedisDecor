@@ -1,4 +1,4 @@
 Cython==3.0.4
 hiredis>=2.2.3
 redis>=4.5.5
-serializor>=0.1.12.7
+serializor>=0.1.12.8
